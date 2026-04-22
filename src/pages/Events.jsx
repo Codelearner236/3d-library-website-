@@ -88,38 +88,6 @@ const Events = () => {
         </div>
       </div>
 
-      {/* Upcoming Events Notice Format */}
-      <div className="section-header" style={{ marginBottom: '20px' }}>
-        <h2 className="section-title" style={{ color: 'var(--accent-color)', fontSize: '2rem' }}>Notice Board: Upcoming Events</h2>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }} className="delay-1">
-        
-        <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #f72585' }}>
-          <p style={{ color: '#f72585', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px' }}>DATE: October 11, 2026</p>
-          <h3 style={{ marginBottom: '8px', fontSize: '1.2rem', color: 'var(--text-primary)' }}>Notice for Virtual Reality in Education Seminar</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-            All members are hereby informed that a special seminar on "Virtual Reality in Education" will be held. The session will cover modern techniques integrating VR and 3D web technologies to enhance learning experiences. 
-          </p>
-        </div>
-        
-        <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #4cc9f0' }}>
-          <p style={{ color: '#4cc9f0', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px' }}>DATE: November 05, 2026</p>
-          <h3 style={{ marginBottom: '8px', fontSize: '1.2rem', color: 'var(--text-primary)' }}>Notice for 3D Holographic Book Projections</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-            This is to notify everyone regarding the upcoming live demonstration of 3D Holographic Book Projections. Members are encouraged to attend and discover the future of interactive reading.
-          </p>
-        </div>
-        
-        <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #4361ee' }}>
-          <p style={{ color: '#4361ee', fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px' }}>DATE: December 12, 2026</p>
-          <h3 style={{ marginBottom: '8px', fontSize: '1.2rem', color: 'var(--text-primary)' }}>Notice for Sci-Fi Author Meet & Greet</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5' }}>
-            An exclusive Q&A session with acclaimed sci-fi authors will take place. This is a unique opportunity to engage in an immersive discussion about the future of literature and technology.
-          </p>
-        </div>
-
-      </div>
     </div>
   );
 };
