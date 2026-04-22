@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -29,6 +30,27 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        localStorage.setItem('studentToken', data.token);
+        localStorage.setItem('studentName', data.name);
+        window.location.href = '/'; 
+      } else {
+        setError(data.message || 'Google login failed');
+      }
+    } catch (err) {
+      setError('An error occurred during Google login.');
+    }
+  };
+
   return (
     <div className="page-container animate-fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div className="glass-card" style={{ maxWidth: '400px', width: '100%' }}>
@@ -40,6 +62,21 @@ const Login = () => {
           <input type="password" placeholder="Password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} style={inputStyle} />
           <button type="submit" className="btn-primary" style={{ marginTop: '10px', width: '100%' }}>Login to Account</button>
         </form>
+        
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', color: 'var(--text-secondary)' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+          <span style={{ padding: '0 10px', fontSize: '0.9rem' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google login was unsuccessful.')}
+            useOneTap
+          />
+        </div>
+
         <p style={{ textAlign: 'center', marginTop: '20px', color: 'var(--text-secondary)' }}>
           Don't have an account? <Link to="/register" style={{ color: 'var(--accent-color)' }}>Register here</Link>
         </p>

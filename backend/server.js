@@ -11,11 +11,22 @@ const bcrypt = require('bcryptjs');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { OAuth2Client } = require('google-auth-library');
+const { sendOTP } = require('./utils/mailer');
 
-const User = require('./models/User');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const User = require('./models/User'); // Keep for legacy, but mostly using users.json now
 const Book = require('./models/Book');
 
 const app = express();
+
+const usersFile = path.join(__dirname, 'users.json');
+if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]');
+const readUsers = () => JSON.parse(fs.readFileSync(usersFile, 'utf8'));
+const writeUsers = (data) => fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
+
+const otpStore = new Map(); // Store OTPs in memory temporarily
 const PORT = process.env.PORT || 5000;
 const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_admin_key_3d_library';
 
@@ -122,49 +133,119 @@ const ADMIN_USER = process.env.ADMIN_USER || 'admin_fallback';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'pass_fallback';
 
 // 1. Authentication Endpoints
-// Register Student
-app.post('/api/auth/register', async (req, res) => {
+// Send OTP for Registration
+app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    
+    // Check if user exists in JSON
+    const users = readUsers();
+    if (users.find(u => u.email === email)) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    otpStore.set(email, { 
+      otp, 
+      userData: { name, email, password },
+      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+    });
 
-    // Create new user
-    const newUser = new User({ name, email, password: hashedPassword, role: 'student' });
-    await newUser.save();
-
-    res.json({ success: true, message: 'Student registered successfully' });
+    const sent = await sendOTP(email, otp);
+    if (sent) {
+      res.json({ success: true, message: 'OTP sent successfully' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send OTP email. Please check server SMTP settings.' });
+    }
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Registration failed', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 
-// User/Admin Login
+// Verify OTP & Complete Registration
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const record = otpStore.get(email);
+
+    if (!record || record.expiresAt < Date.now()) {
+      return res.status(400).json({ success: false, message: 'OTP expired or invalid' });
+    }
+    if (record.otp !== otp) {
+      return res.status(400).json({ success: false, message: 'Incorrect OTP' });
+    }
+
+    const hashedPassword = await bcrypt.hash(record.userData.password, 10);
+    const users = readUsers();
+    const newUser = {
+      id: Date.now().toString(),
+      name: record.userData.name,
+      email,
+      password: hashedPassword,
+      role: 'student'
+    };
+
+    users.push(newUser);
+    writeUsers(users);
+    otpStore.delete(email); // clear OTP
+
+    res.json({ success: true, message: 'Student registered successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Verification failed', error: error.message });
+  }
+});
+
+// Google Login/Register
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, sub: googleId } = payload;
+
+    const users = readUsers();
+    let user = users.find(u => u.email === email);
+
+    if (!user) {
+      // Register them automatically
+      user = { id: Date.now().toString(), name, email, googleId, role: 'student' };
+      users.push(user);
+      writeUsers(users);
+    }
+
+    const jwtToken = jwt.sign({ id: user.id, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
+    res.json({ success: true, token: jwtToken, role: user.role, name: user.name });
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid Google token', error: error.message });
+  }
+});
+
+// User/Admin Login (using JSON file)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, username } = req.body;
 
-    // Fallback for the hardcoded admin login currently used by the frontend
+    // Admin fallback
     if (username === ADMIN_USER && password === ADMIN_PASS) {
       const token = jwt.sign({ username, role: 'admin' }, SECRET_KEY, { expiresIn: '2h' });
       return res.json({ success: true, token, role: 'admin' });
     }
 
-    // Database user login
-    const user = await User.findOne({ email });
+    const users = readUsers();
+    const user = users.find(u => u.email === email);
     if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
+    if (!user.password) {
+      return res.status(401).json({ success: false, message: 'Please login with Google' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
     res.json({ success: true, token, role: user.role, name: user.name });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Login failed', error: error.message });
