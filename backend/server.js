@@ -276,12 +276,15 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       return res.status(400).json({ success: false, message: 'Please upload both a book file and a cover image.' });
     }
 
-    // Use AI to categorize the book - wrapped to avoid crashing the whole upload
-    let category = "Fiction";
-    try {
-      category = await categorizeBook(bookData.title, bookData.author);
-    } catch (aiErr) {
-      console.error("AI Categorization failed during upload:", aiErr.message);
+    // Use manually selected category if provided, otherwise fall back to AI
+    let category = bookData.category && bookData.category.trim() !== '' ? bookData.category : null;
+    if (!category) {
+      try {
+        category = await categorizeBook(bookData.title, bookData.author);
+      } catch (aiErr) {
+        console.error("AI Categorization failed during upload:", aiErr.message);
+        category = "Fiction";
+      }
     }
 
     const newBook = {
