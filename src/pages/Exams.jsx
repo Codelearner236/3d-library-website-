@@ -5,7 +5,7 @@ const Exams = () => {
 
   const handleDownload = () => {
     if (!rollNo.trim()) return alert('Please enter your Roll Number');
-    window.open(`http://localhost:5001/api/public/admit-card/${rollNo.trim()}`, '_blank');
+    window.open(`https://threed-library-backend.onrender.com/api/public/admit-card/${rollNo.trim()}`, '_blank');
   };
   return (
     <div className="page-container animate-fade-in">

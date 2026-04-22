@@ -10,7 +10,7 @@ const Books = () => {
   const categories = ['All', 'Horror', 'Fiction', 'Story', 'Sci-Fi', 'Biography', 'Mystery', 'Fantasy', 'Educational', 'Thriller'];
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/public/books')
+    fetch('https://threed-library-backend.onrender.com/api/public/books')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -42,7 +42,7 @@ const Books = () => {
     }
 
     // Try to read - if purchased, backend will return fileUrl
-    fetch(`http://localhost:5001/api/books/read/${book.id}`, {
+    fetch(`https://threed-library-backend.onrender.com/api/books/read/${book.id}`, {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
       .then(res => res.json())
@@ -59,7 +59,7 @@ const Books = () => {
 
   const initiatePayment = async (book) => {
     try {
-      const orderRes = await fetch('http://localhost:5001/api/payment/create-order', {
+      const orderRes = await fetch('https://threed-library-backend.onrender.com/api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ const Books = () => {
         order_id: orderData.order.id,
         handler: async function (response) {
           // Verify payment
-          const verifyRes = await fetch('http://localhost:5001/api/payment/verify', {
+          const verifyRes = await fetch('https://threed-library-backend.onrender.com/api/payment/verify', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ const Books = () => {
           if (verifyData.success) {
             alert('Payment successful! You can now read this book.');
             // Now read the book
-            const readRes = await fetch(`http://localhost:5001/api/books/read/${book.id}`, {
+            const readRes = await fetch(`https://threed-library-backend.onrender.com/api/books/read/${book.id}`, {
               headers: { 'Authorization': `Bearer ${studentToken}` }
             });
             const readData = await readRes.json();

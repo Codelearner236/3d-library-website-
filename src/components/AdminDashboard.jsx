@@ -10,7 +10,7 @@ const AdminDashboard = ({ onLogout, token }) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     formData.append('isPremium', isPremium);
-    const response = await fetch('http://localhost:5001/api/admin/books', {
+    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/books', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
@@ -23,7 +23,7 @@ const AdminDashboard = ({ onLogout, token }) => {
 
   const handleEventUpload = async (e) => {
     e.preventDefault();
-    const response = await fetch('http://localhost:5001/api/admin/events', {
+    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/events', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: 'New Event' })
@@ -33,7 +33,7 @@ const AdminDashboard = ({ onLogout, token }) => {
   };
 
   const handleExamEdit = async () => {
-    const response = await fetch('http://localhost:5001/api/admin/exams/1', {
+    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/exams/1', {
       method: 'PUT',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'Updated' })
@@ -46,7 +46,7 @@ const AdminDashboard = ({ onLogout, token }) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const payload = Object.fromEntries(formData.entries());
-    const response = await fetch('http://localhost:5001/api/admin/student', {
+    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/student', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -121,7 +121,7 @@ const AdminDashboard = ({ onLogout, token }) => {
               e.preventDefault();
               const formData = new FormData(e.target);
               const payload = Object.fromEntries(formData.entries());
-              const response = await fetch('http://localhost:5001/api/admin/exams', {
+              const response = await fetch('https://threed-library-backend.onrender.com/api/admin/exams', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
