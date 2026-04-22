@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1776619126351,
+    "title": "BADSHAHI ANGTI",
+    "author": "SATYAJIT RAY",
+    "category": "Story",
+    "coverUrl": "http://localhost:5000/uploads/1776619126345-Badshahi-Angti-By-Satyajit-Ray1.jpg",
+    "fileUrl": "http://localhost:5000/uploads/1776619126272-Badshahi Angti By Satyajit Ray.pdf"
+  },
+  {
+    "id": 1776683716154,
+    "title": "FELUDA SAMAGRA",
+    "author": "SATYAJIT RAY",
+    "category": "Mystery",
+    "coverUrl": "http://localhost:5000/uploads/1776683716130-Feluda-Somogro-1-By-Satyajit-Ray1.jpg",
+    "fileUrl": "http://localhost:5000/uploads/1776683714184-Feluda Somogro-1 By Satyajit Ray.pdf",
+    "isPremium": false,
+    "price": 0
+  },
+  {
+    "id": 1776714425745,
+    "title": "QUANTATIVE APTITUDE",
+    "author": "S CHAND AND R.S.AGGARWAL",
+    "category": "Educational",
+    "coverUrl": "http://localhost:5000/uploads/1776714424750-Screenshot 2026-04-20 233551.png",
+    "fileUrl": "http://localhost:5000/uploads/1776714424477-R. S. Aggarwal - Quantitative Aptitude.pdf",
+    "isPremium": false,
+    "price": 0
+  }
+]
