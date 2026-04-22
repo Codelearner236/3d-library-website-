@@ -28,6 +28,7 @@ const writeUsers = (data) => fs.writeFileSync(usersFile, JSON.stringify(data, nu
 
 const otpStore = new Map(); // Store OTPs in memory temporarily
 const PORT = process.env.PORT || 5000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_admin_key_3d_library';
 
 // Connect to MongoDB
@@ -288,8 +289,8 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       title: bookData.title || 'Untitled Book',
       author: bookData.author || 'Unknown Author',
       category: category,
-      coverUrl: `http://localhost:5000/uploads/${files.coverImage[0].filename}`,
-      fileUrl: `http://localhost:5000/uploads/${files.bookFile[0].filename}`,
+      coverUrl: `${BASE_URL}/uploads/${files.coverImage[0].filename}`,
+      fileUrl: `${BASE_URL}/uploads/${files.bookFile[0].filename}`,
       isPremium: bookData.isPremium === 'true' || bookData.isPremium === true,
       price: parseInt(bookData.price) || 0
     };
