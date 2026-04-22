@@ -117,9 +117,9 @@ if (fs.existsSync(studentsFile)) {
   }
 }
 
-// Admin Credentials (Fallback for hardcoded admin)
-const ADMIN_USER = 'Mahadev';
-const ADMIN_PASS = 'Mahadev@12$45';
+// Admin Credentials (Securely loaded from Environment Variables)
+const ADMIN_USER = process.env.ADMIN_USER || 'admin_fallback';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'pass_fallback';
 
 // 1. Authentication Endpoints
 // Register Student
