@@ -323,13 +323,44 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
   }
 });
 
-// Public books list (hides fileUrl for premium books)
-app.get('/api/public/books', (req, res) => {
-  const safeBooks = uploadedBooks.map(book => ({
-    ...book,
-    fileUrl: book.isPremium ? null : book.fileUrl  // Hide URL for premium books
-  }));
-  res.json({ success: true, books: safeBooks });
+// Public books list — reads from MongoDB so books persist across Render restarts
+app.get('/api/public/books', async (req, res) => {
+  try {
+    const mongoBooks = await Book.find().sort({ createdAt: -1 });
+    const safeBooks = mongoBooks.map(book => ({
+      id: book._id,
+      title: book.title,
+      author: book.author,
+      category: book.category,
+      coverUrl: book.coverUrl,
+      fileUrl: book.isPremium ? null : book.fileUrl,
+      isPremium: book.isPremium,
+      price: book.price
+    }));
+    res.json({ success: true, books: safeBooks });
+  } catch (err) {
+    // Fallback to in-memory if MongoDB fails
+    const safeBooks = uploadedBooks.map(book => ({
+      ...book,
+      fileUrl: book.isPremium ? null : book.fileUrl
+    }));
+    res.json({ success: true, books: safeBooks });
+  }
+});
+
+// Delete a book (admin only)
+app.delete('/api/admin/books/:id', verifyToken, async (req, res) => {
+  try {
+    const bookId = req.params.id;
+    // Delete from MongoDB
+    await Book.findByIdAndDelete(bookId);
+    // Also remove from in-memory array (for local fallback)
+    uploadedBooks = uploadedBooks.filter(b => String(b.id) !== String(bookId));
+    fs.writeFileSync(dbFile, JSON.stringify(uploadedBooks, null, 2));
+    res.json({ success: true, message: 'Book deleted successfully!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete book: ' + err.message });
+  }
 });
 
 // Protected book reading (only for purchased premium books)

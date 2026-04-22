@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const AdminDashboard = ({ onLogout, token }) => {
   const [message, setMessage] = useState('');
   const [isPremium, setIsPremium] = useState(false);
+  const [books, setBooks] = useState([]);
+  const [loadingBooks, setLoadingBooks] = useState(true);
+
+  const fetchBooks = () => {
+    setLoadingBooks(true);
+    fetch('https://threed-library-backend.onrender.com/api/public/books')
+      .then(res => res.json())
+      .then(data => { if (data.success) setBooks(data.books); })
+      .finally(() => setLoadingBooks(false));
+  };
+
+  useEffect(() => { fetchBooks(); }, []);
 
   const headers = { 'Authorization': `Bearer ${token}` };
 
@@ -19,6 +31,18 @@ const AdminDashboard = ({ onLogout, token }) => {
     setMessage(data.message || 'Book uploaded successfully!');
     setIsPremium(false);
     e.target.reset();
+    fetchBooks(); // Refresh book list after upload
+  };
+
+  const handleDeleteBook = async (bookId, bookTitle) => {
+    if (!window.confirm(`Delete "${bookTitle}"? This cannot be undone.`)) return;
+    const response = await fetch(`https://threed-library-backend.onrender.com/api/admin/books/${bookId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    setMessage(data.message || 'Book deleted!');
+    fetchBooks(); // Refresh list
   };
 
   const handleEventUpload = async (e) => {
@@ -181,6 +205,37 @@ const AdminDashboard = ({ onLogout, token }) => {
             </form>
           </div>
         </div>
+      </div>
+
+      {/* Manage Books — delete duplicates or wrong entries */}
+      <div className="glass-card" style={{ marginTop: '30px' }}>
+        <h2 style={{ marginBottom: '16px', color: '#f72585' }}>Manage Uploaded Books</h2>
+        {loadingBooks ? (
+          <p style={{ color: 'var(--text-secondary)' }}>Loading books...</p>
+        ) : books.length === 0 ? (
+          <p style={{ color: 'var(--text-secondary)' }}>No books uploaded yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {books.map(book => (
+              <div key={book.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-color)', borderRadius: '10px', padding: '12px 16px', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: 0 }}>
+                  {book.coverUrl && <img src={book.coverUrl} alt={book.title} style={{ width: '42px', height: '56px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />}
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.title}</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{book.author}</p>
+                  </div>
+                  <span style={{ background: 'rgba(76,201,240,0.15)', color: '#4cc9f0', padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', flexShrink: 0 }}>{book.category}</span>
+                </div>
+                <button
+                  onClick={() => handleDeleteBook(book.id, book.title)}
+                  style={{ background: 'rgba(247,37,133,0.15)', color: '#f72585', border: '1px solid rgba(247,37,133,0.4)', borderRadius: '8px', padding: '7px 18px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', flexShrink: 0, transition: 'all 0.2s' }}
+                  onMouseEnter={e => e.target.style.background = 'rgba(247,37,133,0.35)'}
+                  onMouseLeave={e => e.target.style.background = 'rgba(247,37,133,0.15)'}
+                >🗑 Delete</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
