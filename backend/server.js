@@ -51,14 +51,14 @@ Choose EXACTLY ONE category from this list:
 Note: Exam preparations, quantitative aptitude, textbooks, and study guides MUST be categorized as "Educational".
 
 Return ONLY the exact category name from the list above. Do not include any punctuation or extra words.`;
-    
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let text = response.text().trim().replace(/[^a-zA-Z-]/g, '');
-    
+
     const validCategories = ["Horror", "Fiction", "Story", "Sci-Fi", "Biography", "Mystery", "Fantasy", "Educational", "Thriller"];
     const matchedCategory = validCategories.find(c => c.toLowerCase() === text.toLowerCase());
-    
+
     if (matchedCategory) {
       return matchedCategory;
     } else {
@@ -118,28 +118,28 @@ if (fs.existsSync(studentsFile)) {
 }
 
 // Admin Credentials (Fallback for hardcoded admin)
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'admin123';
+const ADMIN_USER = 'Mahadev';
+const ADMIN_PASS = 'Mahadev@12$45';
 
 // 1. Authentication Endpoints
 // Register Student
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    
+
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
-    
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     // Create new user
     const newUser = new User({ name, email, password: hashedPassword, role: 'student' });
     await newUser.save();
-    
+
     res.json({ success: true, message: 'Student registered successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Registration failed', error: error.message });
@@ -150,7 +150,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, username } = req.body;
-    
+
     // Fallback for the hardcoded admin login currently used by the frontend
     if (username === ADMIN_USER && password === ADMIN_PASS) {
       const token = jwt.sign({ username, role: 'admin' }, SECRET_KEY, { expiresIn: '2h' });
@@ -160,10 +160,10 @@ app.post('/api/auth/login', async (req, res) => {
     // Database user login
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    
+
     const token = jwt.sign({ id: user._id, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
     res.json({ success: true, token, role: user.role, name: user.name });
   } catch (error) {
@@ -193,7 +193,7 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       console.error("Upload failed: Missing files in request");
       return res.status(400).json({ success: false, message: 'Please upload both a book file and a cover image.' });
     }
-    
+
     // Use AI to categorize the book - wrapped to avoid crashing the whole upload
     let category = "Fiction";
     try {
@@ -201,7 +201,7 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
     } catch (aiErr) {
       console.error("AI Categorization failed during upload:", aiErr.message);
     }
-    
+
     const newBook = {
       id: Date.now(),
       title: bookData.title || 'Untitled Book',
@@ -212,7 +212,7 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       isPremium: bookData.isPremium === 'true' || bookData.isPremium === true,
       price: parseInt(bookData.price) || 0
     };
-    
+
     // Save to MongoDB - wrapped to be optional (in case user isn't running MongoDB)
     try {
       const mongoBook = new Book({
@@ -228,7 +228,7 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
     } catch (mongoErr) {
       console.warn("MongoDB save failed (continuing with JSON storage):", mongoErr.message);
     }
-    
+
     uploadedBooks.push(newBook);
     fs.writeFileSync(dbFile, JSON.stringify(uploadedBooks, null, 2));
     res.json({ success: true, message: 'Book uploaded successfully with AI categorization!', book: newBook });
@@ -279,14 +279,14 @@ app.get('/api/books/read/:bookId', verifyToken, async (req, res) => {
 app.post('/api/payment/create-order', verifyToken, async (req, res) => {
   try {
     const { amount, bookId, type } = req.body; // type: 'book' or 'exam'
-    
+
     const options = {
       amount: amount * 100, // Razorpay takes amount in paise
       currency: 'INR',
       receipt: `receipt_${type}_${Date.now()}`,
       notes: { bookId: bookId || '', type, userId: req.admin.id || '' }
     };
-    
+
     const order = await razorpay.orders.create(options);
     res.json({ success: true, order, key: process.env.RAZORPAY_KEY_ID });
   } catch (err) {
@@ -298,18 +298,18 @@ app.post('/api/payment/create-order', verifyToken, async (req, res) => {
 app.post('/api/payment/verify', verifyToken, async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookId, type } = req.body;
-    
+
     // Verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'placeholder_secret')
       .update(body)
       .digest('hex');
-    
+
     if (expectedSignature !== razorpay_signature) {
       return res.status(400).json({ success: false, message: 'Payment verification failed' });
     }
-    
+
     // Grant access based on type
     if (type === 'book' && bookId) {
       await User.findByIdAndUpdate(req.admin.id, {
@@ -320,7 +320,7 @@ app.post('/api/payment/verify', verifyToken, async (req, res) => {
         $addToSet: { paidExams: bookId } // reusing bookId field for exam name
       });
     }
-    
+
     res.json({ success: true, message: 'Payment verified and access granted!' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Verification failed', error: err.message });
@@ -362,7 +362,7 @@ app.put('/api/admin/events/:id', verifyToken, (req, res) => {
 app.post('/api/admin/student', verifyToken, (req, res) => {
   const { name, rollNo, exam } = req.body;
   if (!name || !rollNo) return res.status(400).json({ success: false, message: 'Name and Roll No are required' });
-  
+
   const newStudent = { name, rollNo, exam: exam || 'General Assessment' };
   // Update if exists, else push
   const existingIndex = registeredStudents.findIndex(s => s.rollNo === rollNo);
@@ -371,7 +371,7 @@ app.post('/api/admin/student', verifyToken, (req, res) => {
   } else {
     registeredStudents.push(newStudent);
   }
-  
+
   fs.writeFileSync(studentsFile, JSON.stringify(registeredStudents, null, 2));
   res.json({ success: true, message: 'Student registered successfully' });
 });
@@ -380,36 +380,36 @@ app.post('/api/admin/student', verifyToken, (req, res) => {
 app.get('/api/public/admit-card/:rollNo', (req, res) => {
   const rollNo = req.params.rollNo;
   const student = registeredStudents.find(s => s.rollNo === rollNo);
-  
+
   if (!student) {
     return res.status(404).send('Student not found. Please check your Roll Number.');
   }
 
   // Create a PDF document
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  
+
   res.setHeader('Content-disposition', `attachment; filename=AdmitCard_${rollNo}.pdf`);
   res.setHeader('Content-type', 'application/pdf');
-  
+
   doc.pipe(res);
-  
+
   // Design the PDF
   doc.rect(20, 20, 555, 300).stroke('#4cc9f0'); // Outer border
   doc.rect(25, 25, 545, 290).stroke('#adb5bd'); // Inner border
-  
+
   doc.fontSize(24).fillColor('#0b0c10').text('NEW APURBA SANGHA LIBRARY', { align: 'center' });
   doc.moveDown(0.5);
   doc.fontSize(16).fillColor('#7209b7').text('OFFICIAL ADMIT CARD', { align: 'center' });
   doc.moveDown(2);
-  
+
   doc.fontSize(14).fillColor('black');
   doc.text(`Student Name : ${student.name.toUpperCase()}`, 50, 150);
   doc.text(`Roll Number  : ${student.rollNo}`, 50, 180);
   doc.text(`Examination  : ${student.exam}`, 50, 210);
-  
+
   doc.moveDown(2);
   doc.fontSize(10).fillColor('gray').text('Please bring a printed copy of this admit card to the examination center.', 50, 280, { align: 'center' });
-  
+
   doc.end();
 });
 
