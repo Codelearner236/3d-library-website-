@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { API_BASE_URL } from '../config';
 
 const Register = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -16,7 +17,7 @@ const Register = () => {
     setError('');
     
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -39,7 +40,7 @@ const Register = () => {
     setError('');
     
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, otp })
@@ -59,7 +60,7 @@ const Register = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/google', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential })

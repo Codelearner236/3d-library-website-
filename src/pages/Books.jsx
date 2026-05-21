@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { API_BASE_URL } from '../config';
 
 const Books = () => {
   const [books, setBooks] = useState([]);
@@ -11,7 +12,7 @@ const Books = () => {
   const categories = ['All', 'Horror', 'Fiction', 'Story', 'Sci-Fi', 'Biography', 'Mystery', 'Fantasy', 'Educational', 'Thriller'];
 
   useEffect(() => {
-    fetch('https://threed-library-backend.onrender.com/api/public/books')
+    fetch(`${API_BASE_URL}/api/public/books`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -43,7 +44,7 @@ const Books = () => {
     }
 
     // Try to read - if purchased, backend will return fileUrl
-    fetch(`https://threed-library-backend.onrender.com/api/books/read/${book.id}`, {
+    fetch(`${API_BASE_URL}/api/books/read/${book.id}`, {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
       .then(res => res.json())
@@ -60,7 +61,7 @@ const Books = () => {
 
   const initiatePayment = async (book) => {
     try {
-      const orderRes = await fetch('https://threed-library-backend.onrender.com/api/payment/create-order', {
+      const orderRes = await fetch(`${API_BASE_URL}/api/payment/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +85,7 @@ const Books = () => {
         order_id: orderData.order.id,
         handler: async function (response) {
           // Verify payment
-          const verifyRes = await fetch('https://threed-library-backend.onrender.com/api/payment/verify', {
+          const verifyRes = await fetch(`${API_BASE_URL}/api/payment/verify`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ const Books = () => {
           if (verifyData.success) {
             alert('Payment successful! You can now read this book.');
             // Now read the book
-            const readRes = await fetch(`https://threed-library-backend.onrender.com/api/books/read/${book.id}`, {
+            const readRes = await fetch(`${API_BASE_URL}/api/books/read/${book.id}`, {
               headers: { 'Authorization': `Bearer ${studentToken}` }
             });
             const readData = await readRes.json();

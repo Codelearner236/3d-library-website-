@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AdminDashboard from '../components/AdminDashboard';
+import { API_BASE_URL } from '../config';
 
 const Admin = () => {
   const [token, setToken] = useState(localStorage.getItem('adminToken'));
@@ -10,7 +11,7 @@ const Admin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

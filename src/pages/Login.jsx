@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { API_BASE_URL } from '../config';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -11,7 +12,7 @@ const Login = () => {
     setError('');
     
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -32,7 +33,7 @@ const Login = () => {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const response = await fetch('https://threed-library-backend.onrender.com/api/auth/google', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: credentialResponse.credential })

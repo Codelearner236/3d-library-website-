@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { API_BASE_URL } from '../config';
 
 const Exams = () => {
   const [rollNo, setRollNo] = useState('');
 
   const handleDownload = () => {
     if (!rollNo.trim()) return alert('Please enter your Roll Number');
-    window.open(`https://threed-library-backend.onrender.com/api/public/admit-card/${rollNo.trim()}`, '_blank');
+    window.open(`${API_BASE_URL}/api/public/admit-card/${rollNo.trim()}`, '_blank');
   };
   return (
     <div className="page-container">

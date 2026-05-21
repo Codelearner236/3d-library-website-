@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 
 const AdminDashboard = ({ onLogout, token }) => {
   const [message, setMessage] = useState('');
@@ -8,9 +9,13 @@ const AdminDashboard = ({ onLogout, token }) => {
 
   const fetchBooks = () => {
     setLoadingBooks(true);
-    fetch('https://threed-library-backend.onrender.com/api/public/books')
+    fetch(`${API_BASE_URL}/api/public/books`)
       .then(res => res.json())
       .then(data => { if (data.success) setBooks(data.books); })
+      .catch(err => {
+        console.error('Failed to fetch books:', err);
+        setMessage('Failed to load books from server.');
+      })
       .finally(() => setLoadingBooks(false));
   };
 
@@ -20,64 +25,91 @@ const AdminDashboard = ({ onLogout, token }) => {
 
   const handleBookUpload = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    formData.append('isPremium', isPremium);
-    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/books', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
-    const data = await response.json();
-    setMessage(data.message || 'Book uploaded successfully!');
-    setIsPremium(false);
-    e.target.reset();
-    fetchBooks(); // Refresh book list after upload
+    setMessage('Uploading book... Please wait.');
+    try {
+      const formData = new FormData(e.target);
+      formData.append('isPremium', isPremium);
+      const response = await fetch(`${API_BASE_URL}/api/admin/books`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setMessage(data.message || 'Book uploaded successfully!');
+        setIsPremium(false);
+        e.target.reset();
+        fetchBooks(); // Refresh book list after upload
+      } else {
+        setMessage(data.message || 'Upload failed. Please check file sizes or try again.');
+      }
+    } catch (err) {
+      console.error('Upload network error:', err);
+      setMessage('Network error during upload. The file may be too large or connection timed out.');
+    }
   };
 
   const handleDeleteBook = async (bookId, bookTitle) => {
     if (!window.confirm(`Delete "${bookTitle}"? This cannot be undone.`)) return;
-    const response = await fetch(`https://threed-library-backend.onrender.com/api/admin/books/${bookId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-    setMessage(data.message || 'Book deleted!');
-    fetchBooks(); // Refresh list
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/books/${bookId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setMessage(data.message || 'Book deleted!');
+      fetchBooks(); // Refresh list
+    } catch (err) {
+      console.error('Delete error:', err);
+      setMessage('Failed to delete book.');
+    }
   };
 
   const handleEventUpload = async (e) => {
     e.preventDefault();
-    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/events', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'New Event' })
-    });
-    const data = await response.json();
-    setMessage(data.message || 'Event uploaded successfully!');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/events`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New Event' })
+      });
+      const data = await response.json();
+      setMessage(data.message || 'Event uploaded successfully!');
+    } catch (err) {
+      setMessage('Failed to upload event.');
+    }
   };
 
   const handleExamEdit = async () => {
-    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/exams/1', {
-      method: 'PUT',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Updated' })
-    });
-    const data = await response.json();
-    setMessage(data.message || 'Exam edited successfully!');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/exams/1`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Updated' })
+      });
+      const data = await response.json();
+      setMessage(data.message || 'Exam edited successfully!');
+    } catch (err) {
+      setMessage('Failed to edit exam.');
+    }
   };
 
   const handleStudentRegister = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const payload = Object.fromEntries(formData.entries());
-    const response = await fetch('https://threed-library-backend.onrender.com/api/admin/student', {
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json();
-    setMessage(data.message || 'Student registered successfully!');
-    e.target.reset();
+    try {
+      const formData = new FormData(e.target);
+      const payload = Object.fromEntries(formData.entries());
+      const response = await fetch(`${API_BASE_URL}/api/admin/student`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      setMessage(data.message || 'Student registered successfully!');
+      e.target.reset();
+    } catch (err) {
+      setMessage('Failed to register student.');
+    }
   };
 
   return (
@@ -157,16 +189,20 @@ const AdminDashboard = ({ onLogout, token }) => {
             <h2 style={{ marginBottom: '15px', color: '#f72585' }}>Schedule Exam</h2>
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const formData = new FormData(e.target);
-              const payload = Object.fromEntries(formData.entries());
-              const response = await fetch('https://threed-library-backend.onrender.com/api/admin/exams', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              });
-              const data = await response.json();
-              setMessage(data.message || 'Exam created successfully!');
-              e.target.reset();
+              try {
+                const formData = new FormData(e.target);
+                const payload = Object.fromEntries(formData.entries());
+                const response = await fetch(`${API_BASE_URL}/api/admin/exams`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                setMessage(data.message || 'Exam created successfully!');
+                e.target.reset();
+              } catch (err) {
+                setMessage('Failed to schedule exam.');
+              }
             }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               
               <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Exam Title</label>

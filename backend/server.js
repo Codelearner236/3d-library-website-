@@ -327,6 +327,16 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
 app.get('/api/public/books', async (req, res) => {
   try {
     const mongoBooks = await Book.find().sort({ createdAt: -1 });
+    
+    // Fallback to db.json if MongoDB is successfully queried but has 0 records
+    if (mongoBooks.length === 0 && uploadedBooks.length > 0) {
+      const safeBooks = uploadedBooks.map(book => ({
+        ...book,
+        fileUrl: book.isPremium ? null : book.fileUrl
+      }));
+      return res.json({ success: true, books: safeBooks });
+    }
+
     const safeBooks = mongoBooks.map(book => ({
       id: book._id,
       title: book.title,
@@ -352,8 +362,14 @@ app.get('/api/public/books', async (req, res) => {
 app.delete('/api/admin/books/:id', verifyToken, async (req, res) => {
   try {
     const bookId = req.params.id;
-    // Delete from MongoDB
-    await Book.findByIdAndDelete(bookId);
+    // Delete from MongoDB only if it's a valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(bookId)) {
+      try {
+        await Book.findByIdAndDelete(bookId);
+      } catch (mongoErr) {
+        console.warn("MongoDB delete failed:", mongoErr.message);
+      }
+    }
     // Also remove from in-memory array (for local fallback)
     uploadedBooks = uploadedBooks.filter(b => String(b.id) !== String(bookId));
     fs.writeFileSync(dbFile, JSON.stringify(uploadedBooks, null, 2));
@@ -366,8 +382,35 @@ app.delete('/api/admin/books/:id', verifyToken, async (req, res) => {
 // Protected book reading (only for purchased premium books)
 app.get('/api/books/read/:bookId', verifyToken, async (req, res) => {
   try {
-    const bookId = parseInt(req.params.bookId);
-    const book = uploadedBooks.find(b => b.id === bookId);
+    const rawBookId = req.params.bookId;
+    let book = null;
+
+    // 1. Try to find in MongoDB if it's a valid ObjectId
+    if (mongoose.Types.ObjectId.isValid(rawBookId)) {
+      try {
+        const mongoBook = await Book.findById(rawBookId);
+        if (mongoBook) {
+          book = {
+            id: mongoBook._id.toString(),
+            title: mongoBook.title,
+            author: mongoBook.author,
+            coverUrl: mongoBook.coverUrl,
+            fileUrl: mongoBook.fileUrl,
+            isPremium: mongoBook.isPremium,
+            price: mongoBook.price
+          };
+        }
+      } catch (mongoErr) {
+        console.warn("MongoDB fetch by ID failed:", mongoErr.message);
+      }
+    }
+
+    // 2. Fall back to uploadedBooks in-memory array if not found
+    if (!book) {
+      const numericId = parseInt(rawBookId);
+      book = uploadedBooks.find(b => String(b.id) === String(rawBookId) || (!isNaN(numericId) && b.id === numericId));
+    }
+
     if (!book) return res.status(404).json({ message: 'Book not found' });
 
     if (!book.isPremium) {
@@ -378,13 +421,14 @@ app.get('/api/books/read/:bookId', verifyToken, async (req, res) => {
     const user = await User.findById(req.admin.id);
     if (!user) return res.status(401).json({ message: 'User not found' });
 
-    const hasPurchased = user.purchasedBooks.some(id => id.toString() === bookId.toString());
+    const hasPurchased = user.purchasedBooks.some(id => id.toString() === rawBookId.toString());
     if (!hasPurchased) {
       return res.status(403).json({ message: 'You have not purchased this book' });
     }
 
     res.json({ success: true, fileUrl: book.fileUrl });
   } catch (err) {
+    console.error("Read book error:", err);
     res.status(500).json({ message: 'Server error' });
   }
 });
