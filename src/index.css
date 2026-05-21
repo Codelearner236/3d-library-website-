@@ -2,20 +2,21 @@
 
 :root {
   color-scheme: dark;
-  --bg-color: #0b0c10;
-  --surface-color: rgba(255, 255, 255, 0.03);
-  --surface-color-hover: rgba(255, 255, 255, 0.08);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --text-primary: #f8f9fa;
-  --text-secondary: #adb5bd;
-  --accent-color: #4cc9f0;
-  --accent-glow: rgba(76, 201, 240, 0.4);
-  --glass-blur: blur(12px);
-  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  --navbar-bg: rgba(11, 12, 16, 0.85);
-  --nav-menu-bg: rgba(11, 12, 16, 0.97);
+  --bg-color: transparent; /* Allow global fluid background to show */
+  --surface-color: rgba(10, 15, 30, 0.4);
+  --surface-color-hover: rgba(20, 25, 45, 0.6);
+  --border-color: rgba(0, 240, 255, 0.15);
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --accent-color: #00f0ff;
+  --accent-glow: rgba(0, 240, 255, 0.5);
+  --glass-blur: blur(16px); /* Reduced blur for massive performance boost */
+  --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --navbar-bg: rgba(2, 6, 23, 0.3); /* Ultra translucent */
+  --nav-menu-bg: rgba(2, 6, 23, 0.85);
   --hero-gradient-start: #fff;
-  --hero-gradient-end: #adb5bd;
+  --hero-gradient-end: #00f0ff;
+  --btn-text: #020617; /* Dark text for white button */
 }
 
 [data-theme="light"] {
@@ -32,6 +33,7 @@
   --nav-menu-bg: rgba(255, 255, 255, 0.97);
   --hero-gradient-start: #212529;
   --hero-gradient-end: #495057;
+  --btn-text: #ffffff; /* Light text for dark button */
 }
 
 * {
@@ -52,13 +54,10 @@ html {
 }
 
 body {
-  background-color: var(--bg-color);
+  background-color: #020617; /* Base dark color, but actual background will be WebGL */
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(76, 201, 240, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(114, 9, 183, 0.08), transparent 25%);
   min-width: 320px;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -101,8 +100,8 @@ ul {
 .glass-card:hover {
   background: var(--surface-color-hover);
   transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.4), 0 0 15px var(--accent-glow);
-  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.6), 0 0 20px var(--accent-glow);
+  border-color: rgba(0, 240, 255, 0.4);
 }
 
 /* ============================
@@ -118,9 +117,11 @@ ul {
   align-items: center;
   z-index: 100;
   background: var(--navbar-bg);
-  backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--border-color);
   gap: 10px;
+  transition: var(--transition);
 }
 
 .logo {
@@ -323,7 +324,7 @@ ul {
    ============================ */
 .btn-primary {
   background: var(--text-primary);
-  color: var(--bg-color);
+  color: var(--btn-text);
   padding: 12px 28px;
   border-radius: 30px;
   font-weight: 600;
@@ -453,10 +454,14 @@ ul {
    ============================ */
 .footer {
   margin-top: 60px;
-  border-bottom: none;
-  border-left: none;
-  border-right: none;
+  padding: 40px;
+  background: var(--navbar-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--border-color);
   border-radius: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .footer-link {

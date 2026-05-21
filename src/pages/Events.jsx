@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ScrollReveal } from '../components/ScrollReveal';
 
 const carouselImages = [
   '/events/media__1776798746950.jpg',
@@ -32,62 +33,67 @@ const Events = () => {
   };
 
   return (
-    <div className="page-container animate-fade-in">
-      <div className="section-header">
-        <h1 className="section-title" style={{ color: '#f72585' }}>Past Events</h1>
-        <p className="section-subtitle">Take a look back at our community's previous celebrations and gatherings.</p>
-      </div>
+    <div className="page-container">
+      <div className="glass-panel" style={{ padding: '40px', minHeight: 'calc(100vh - 200px)' }}>
+        <ScrollReveal variant="fadeUp" duration={0.8}>
+          <div className="section-header">
+            <h1 className="section-title" style={{ color: '#f72585' }}>Past Events</h1>
+            <p className="section-subtitle">Take a look back at our community's previous celebrations and gatherings.</p>
+          </div>
+        </ScrollReveal>
 
-      {/* Hero Carousel Section */}
-      <div className="glass-panel" style={{ position: 'relative', width: '100%', height: '500px', overflow: 'hidden', borderRadius: '16px', marginBottom: '60px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-        {carouselImages.map((src, idx) => (
-          <img 
-            key={idx}
-            src={src}
-            alt={`Event ${idx}`}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: idx === currentIdx ? 1 : 0,
-              transition: 'opacity 0.8s ease-in-out',
-              zIndex: idx === currentIdx ? 1 : 0
-            }}
-          />
-        ))}
-
-        {/* Gradient Overlay for better aesthetics */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '150px', background: 'linear-gradient(to top, rgba(11,12,16,0.9), transparent)', zIndex: 2 }}></div>
-        
-        {/* Carousel Controls */}
-        <button 
-          onClick={prevSlide}
-          style={{ position: 'absolute', top: '50%', left: '20px', transform: 'translateY(-50%)', zIndex: 3, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', backdropFilter: 'blur(10px)', color: 'white' }}
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <button 
-          onClick={nextSlide}
-          style={{ position: 'absolute', top: '50%', right: '20px', transform: 'translateY(-50%)', zIndex: 3, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', backdropFilter: 'blur(10px)', color: 'white' }}
-        >
-          <ChevronRight size={24} />
-        </button>
-
-        {/* Indicators */}
-        <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 3, display: 'flex', gap: '10px' }}>
-          {carouselImages.map((_, idx) => (
-            <button 
-              key={idx} 
-              onClick={() => setCurrentIdx(idx)}
-              style={{ width: '10px', height: '10px', borderRadius: '50%', border: 'none', background: idx === currentIdx ? '#f72585' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'all 0.3s' }}
+        {/* Hero Carousel Section */}
+        <ScrollReveal variant="tilt" delay={0.2} duration={1}>
+          <div className="glass-panel" style={{ position: 'relative', width: '100%', height: '500px', overflow: 'hidden', borderRadius: '16px', marginBottom: '60px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+          {carouselImages.map((src, idx) => (
+            <img 
+              key={idx}
+              src={src}
+              alt={`Event ${idx}`}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: idx === currentIdx ? 1 : 0,
+                transition: 'opacity 0.8s ease-in-out',
+                zIndex: idx === currentIdx ? 1 : 0
+              }}
             />
           ))}
-        </div>
-      </div>
 
+          {/* Gradient Overlay for better aesthetics */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '150px', background: 'linear-gradient(to top, rgba(2,6,23,0.9), transparent)', zIndex: 2 }}></div>
+          
+          {/* Carousel Controls */}
+          <button 
+            onClick={prevSlide}
+            style={{ position: 'absolute', top: '50%', left: '20px', transform: 'translateY(-50%)', zIndex: 3, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', backdropFilter: 'blur(10px)', color: 'white' }}
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <button 
+            onClick={nextSlide}
+            style={{ position: 'absolute', top: '50%', right: '20px', transform: 'translateY(-50%)', zIndex: 3, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', padding: '10px', cursor: 'pointer', backdropFilter: 'blur(10px)', color: 'white' }}
+          >
+            <ChevronRight size={24} />
+          </button>
+
+          {/* Indicators */}
+          <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 3, display: 'flex', gap: '10px' }}>
+            {carouselImages.map((_, idx) => (
+              <button 
+                key={idx} 
+                onClick={() => setCurrentIdx(idx)}
+                style={{ width: '10px', height: '10px', borderRadius: '50%', border: 'none', background: idx === currentIdx ? '#f72585' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'all 0.3s' }}
+              />
+            ))}
+          </div>
+        </div>
+        </ScrollReveal>
+      </div>
     </div>
   );
 };

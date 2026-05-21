@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ScrollReveal } from '../components/ScrollReveal';
 
 const Books = () => {
   const [books, setBooks] = useState([]);
@@ -123,64 +124,72 @@ const Books = () => {
   };
 
   return (
-    <div className="page-container animate-fade-in">
-      <div className="section-header">
-        <h1 className="section-title">Digital Repository</h1>
-        <p className="section-subtitle">Browse and interact with our collection of categorized books.</p>
-      </div>
+    <div className="page-container">
+      <div className="glass-panel" style={{ padding: '40px', minHeight: 'calc(100vh - 200px)' }}>
+        <ScrollReveal variant="fadeUp" duration={0.8}>
+          <div className="section-header">
+            <h1 className="section-title">Digital Repository</h1>
+            <p className="section-subtitle">Browse and interact with our collection of categorized books.</p>
+          </div>
+        </ScrollReveal>
 
-      <div className="filter-bar delay-1">
-        {categories.map(cat => (
-          <button 
-            key={cat} 
-            className={`filter-chip ${selectedCategory === cat ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-      
-      {loading ? (
-        <p style={{ color: 'var(--text-secondary)' }}>Loading books...</p>
-      ) : filteredBooks.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>No books found in this category.</p>
-          <button onClick={() => setSelectedCategory('All')} className="btn-secondary" style={{ marginTop: '20px' }}>Clear Filter</button>
-        </div>
-      ) : (
-        <div className="grid-3 delay-2">
-          {filteredBooks.map((book) => (
-            <div key={book.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              {book.isPremium && (
-                <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'linear-gradient(135deg, #f72585, #7209b7)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', color: '#fff', zIndex: '5' }}>
-                  ₹{book.price}
-                </div>
-              )}
-              <div style={{ width: '100%', height: '220px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-                {book.coverUrl ? (
-                  <img src={book.coverUrl} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <p style={{color: 'var(--text-secondary)'}}>No Cover</p>
-                )}
-              </div>
-              
-              {book.category && (
-                <span className={`category-tag ${book.category.toLowerCase().replace(' ', '-')}`}>
-                  {book.category}
-                </span>
-              )}
-              
-              <h3 style={{width: '100%', textAlign: 'left', marginBottom: '5px', fontSize: '1.1rem'}}>{book.title}</h3>
-              <p style={{width: '100%', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '15px'}}>{book.author}</p>
-              
-              <button onClick={() => handleReadBook(book)} className={book.isPremium ? "btn-primary" : "btn-secondary"} style={{ width: '100%', margin: '0', textAlign: 'center', border: book.isPremium ? 'none' : undefined, marginTop: 'auto' }}>
-                {book.isPremium ? 'Buy & Read' : 'Read Online'}
-              </button>
-            </div>
+        <ScrollReveal variant="fadeUp" delay={0.1}>
+          <div className="filter-bar">
+          {categories.map(cat => (
+            <button 
+              key={cat} 
+              className={`filter-chip ${selectedCategory === cat ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(cat)}
+            >
+              {cat}
+            </button>
           ))}
-        </div>
-      )}
+          </div>
+        </ScrollReveal>
+        
+        {loading ? (
+          <p style={{ color: 'var(--text-secondary)' }}>Loading books...</p>
+        ) : filteredBooks.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>No books found in this category.</p>
+            <button onClick={() => setSelectedCategory('All')} className="btn-secondary" style={{ marginTop: '20px' }}>Clear Filter</button>
+          </div>
+        ) : (
+          <div className="grid-3">
+            {filteredBooks.map((book, index) => (
+              <ScrollReveal key={book.id} variant="fadeUp" delay={0.1 * (index % 6)}>
+                <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                {book.isPremium && (
+                  <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'linear-gradient(135deg, #f72585, #7209b7)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700', color: '#fff', zIndex: '5' }}>
+                    ₹{book.price}
+                  </div>
+                )}
+                <div style={{ width: '100%', height: '220px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                  {book.coverUrl ? (
+                    <img src={book.coverUrl} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <p style={{color: 'var(--text-secondary)'}}>No Cover</p>
+                  )}
+                </div>
+                
+                {book.category && (
+                  <span className={`category-tag ${book.category.toLowerCase().replace(' ', '-')}`}>
+                    {book.category}
+                  </span>
+                )}
+                
+                <h3 style={{width: '100%', textAlign: 'left', marginBottom: '5px', fontSize: '1.1rem'}}>{book.title}</h3>
+                <p style={{width: '100%', textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '15px'}}>{book.author}</p>
+                
+                <button onClick={() => handleReadBook(book)} className={book.isPremium ? "btn-primary" : "btn-secondary"} style={{ width: '100%', margin: '0', textAlign: 'center', border: book.isPremium ? 'none' : undefined, marginTop: 'auto' }}>
+                  {book.isPremium ? 'Buy & Read' : 'Read Online'}
+                </button>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
