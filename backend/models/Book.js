@@ -1,13 +1,42 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/db');
 
-const bookSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  author: { type: String, required: true },
-  coverUrl: { type: String },
-  fileUrl: { type: String },
-  price: { type: Number, default: 0 },
-  isPremium: { type: Boolean, default: false },
-  category: { type: String, default: 'Fiction' }
-}, { timestamps: true });
+const Book = sequelize.define('Book', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  author: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  coverUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  fileUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  price: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  isPremium: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  category: {
+    type: DataTypes.STRING,
+    defaultValue: 'Fiction',
+  },
+}, {
+  timestamps: true,
+});
 
-module.exports = mongoose.model('Book', bookSchema);
+module.exports = Book;

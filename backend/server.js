@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
-const mongoose = require('mongoose');
+const sequelize = require('./config/db');
 const bcrypt = require('bcryptjs');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -16,25 +16,29 @@ const { sendOTP } = require('./utils/mailer');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-const User = require('./models/User'); // Keep for legacy, but mostly using users.json now
+const User = require('./models/User');
 const Book = require('./models/Book');
+const Student = require('./models/Student');
 
 const app = express();
 
-const usersFile = path.join(__dirname, 'users.json');
-if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]');
-const readUsers = () => JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-const writeUsers = (data) => fs.writeFileSync(usersFile, JSON.stringify(data, null, 2));
+// Local JSON file storage removed in favor of PostgreSQL
 
 const otpStore = new Map(); // Store OTPs in memory temporarily
 const PORT = process.env.PORT || 5000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const SECRET_KEY = process.env.JWT_SECRET || 'super_secret_admin_key_3d_library';
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/library3d')
-  .then(() => console.log('Connected to MongoDB successfully!'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Connect and sync PostgreSQL database
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connected to PostgreSQL successfully!');
+    return sequelize.sync();
+  })
+  .then(() => {
+    console.log('PostgreSQL database synchronized successfully!');
+  })
+  .catch(err => console.error('PostgreSQL connection/sync error:', err));
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -109,25 +113,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-const dbFile = path.join(__dirname, 'db.json');
-let uploadedBooks = [];
-if (fs.existsSync(dbFile)) {
-  try {
-    uploadedBooks = JSON.parse(fs.readFileSync(dbFile, 'utf8'));
-  } catch (e) {
-    uploadedBooks = [];
-  }
-}
-
-const studentsFile = path.join(__dirname, 'students.json');
-let registeredStudents = [];
-if (fs.existsSync(studentsFile)) {
-  try {
-    registeredStudents = JSON.parse(fs.readFileSync(studentsFile, 'utf8'));
-  } catch (e) {
-    registeredStudents = [];
-  }
-}
+// Local JSON database arrays removed
 
 // Admin Credentials (Securely loaded from Environment Variables)
 const ADMIN_USER = process.env.ADMIN_USER || 'admin_fallback';
@@ -139,9 +125,9 @@ app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
-    // Check if user exists in JSON
-    const users = readUsers();
-    if (users.find(u => u.email === email)) {
+    // Check if user exists in DB
+    const user = await User.findOne({ where: { email } });
+    if (user) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
@@ -177,17 +163,12 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(record.userData.password, 10);
-    const users = readUsers();
-    const newUser = {
-      id: Date.now().toString(),
+    await User.create({
       name: record.userData.name,
       email,
       password: hashedPassword,
       role: 'student'
-    };
-
-    users.push(newUser);
-    writeUsers(users);
+    });
     otpStore.delete(email); // clear OTP
 
     res.json({ success: true, message: 'Student registered successfully' });
@@ -207,14 +188,11 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = ticket.getPayload();
     const { email, name, sub: googleId } = payload;
 
-    const users = readUsers();
-    let user = users.find(u => u.email === email);
+    let user = await User.findOne({ where: { email } });
 
     if (!user) {
       // Register them automatically
-      user = { id: Date.now().toString(), name, email, googleId, role: 'student' };
-      users.push(user);
-      writeUsers(users);
+      user = await User.create({ name, email, googleId, role: 'student' });
     }
 
     const jwtToken = jwt.sign({ id: user.id, role: user.role }, SECRET_KEY, { expiresIn: '2h' });
@@ -224,7 +202,7 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// User/Admin Login (using JSON file)
+// User/Admin Login (using DB)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, username } = req.body;
@@ -235,8 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.json({ success: true, token, role: 'admin' });
     }
 
-    const users = readUsers();
-    const user = users.find(u => u.email === email);
+    const user = await User.findOne({ where: { email } });
     if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
     if (!user.password) {
@@ -287,8 +264,7 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       }
     }
 
-    const newBook = {
-      id: Date.now(),
+    const createdBook = await Book.create({
       title: bookData.title || 'Untitled Book',
       author: bookData.author || 'Unknown Author',
       category: category,
@@ -296,49 +272,22 @@ app.post('/api/admin/books', verifyToken, upload.fields([{ name: 'bookFile', max
       fileUrl: `${BASE_URL}/uploads/${files.bookFile[0].filename}`,
       isPremium: bookData.isPremium === 'true' || bookData.isPremium === true,
       price: parseInt(bookData.price) || 0
-    };
+    });
 
-    // Save to MongoDB - wrapped to be optional (in case user isn't running MongoDB)
-    try {
-      const mongoBook = new Book({
-        title: newBook.title,
-        author: newBook.author,
-        category: newBook.category,
-        coverUrl: newBook.coverUrl,
-        fileUrl: newBook.fileUrl,
-        isPremium: newBook.isPremium,
-        price: newBook.price
-      });
-      await mongoBook.save();
-    } catch (mongoErr) {
-      console.warn("MongoDB save failed (continuing with JSON storage):", mongoErr.message);
-    }
-
-    uploadedBooks.push(newBook);
-    fs.writeFileSync(dbFile, JSON.stringify(uploadedBooks, null, 2));
-    res.json({ success: true, message: 'Book uploaded successfully with AI categorization!', book: newBook });
+    res.json({ success: true, message: 'Book uploaded successfully with AI categorization!', book: createdBook });
   } catch (err) {
     console.error("Internal Upload Error:", err);
     res.status(500).json({ success: false, message: 'Upload failed: ' + err.message });
   }
 });
 
-// Public books list — reads from MongoDB so books persist across Render restarts
+// Public books list
 app.get('/api/public/books', async (req, res) => {
   try {
-    const mongoBooks = await Book.find().sort({ createdAt: -1 });
+    const dbBooks = await Book.findAll({ order: [['createdAt', 'DESC']] });
     
-    // Fallback to db.json if MongoDB is successfully queried but has 0 records
-    if (mongoBooks.length === 0 && uploadedBooks.length > 0) {
-      const safeBooks = uploadedBooks.map(book => ({
-        ...book,
-        fileUrl: book.isPremium ? null : book.fileUrl
-      }));
-      return res.json({ success: true, books: safeBooks });
-    }
-
-    const safeBooks = mongoBooks.map(book => ({
-      id: book._id,
+    const safeBooks = dbBooks.map(book => ({
+      id: book.id,
       title: book.title,
       author: book.author,
       category: book.category,
@@ -349,12 +298,7 @@ app.get('/api/public/books', async (req, res) => {
     }));
     res.json({ success: true, books: safeBooks });
   } catch (err) {
-    // Fallback to in-memory if MongoDB fails
-    const safeBooks = uploadedBooks.map(book => ({
-      ...book,
-      fileUrl: book.isPremium ? null : book.fileUrl
-    }));
-    res.json({ success: true, books: safeBooks });
+    res.status(500).json({ success: false, message: 'Failed to fetch books: ' + err.message });
   }
 });
 
@@ -362,17 +306,7 @@ app.get('/api/public/books', async (req, res) => {
 app.delete('/api/admin/books/:id', verifyToken, async (req, res) => {
   try {
     const bookId = req.params.id;
-    // Delete from MongoDB only if it's a valid ObjectId
-    if (mongoose.Types.ObjectId.isValid(bookId)) {
-      try {
-        await Book.findByIdAndDelete(bookId);
-      } catch (mongoErr) {
-        console.warn("MongoDB delete failed:", mongoErr.message);
-      }
-    }
-    // Also remove from in-memory array (for local fallback)
-    uploadedBooks = uploadedBooks.filter(b => String(b.id) !== String(bookId));
-    fs.writeFileSync(dbFile, JSON.stringify(uploadedBooks, null, 2));
+    await Book.destroy({ where: { id: bookId } });
     res.json({ success: true, message: 'Book deleted successfully!' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to delete book: ' + err.message });
@@ -383,33 +317,7 @@ app.delete('/api/admin/books/:id', verifyToken, async (req, res) => {
 app.get('/api/books/read/:bookId', verifyToken, async (req, res) => {
   try {
     const rawBookId = req.params.bookId;
-    let book = null;
-
-    // 1. Try to find in MongoDB if it's a valid ObjectId
-    if (mongoose.Types.ObjectId.isValid(rawBookId)) {
-      try {
-        const mongoBook = await Book.findById(rawBookId);
-        if (mongoBook) {
-          book = {
-            id: mongoBook._id.toString(),
-            title: mongoBook.title,
-            author: mongoBook.author,
-            coverUrl: mongoBook.coverUrl,
-            fileUrl: mongoBook.fileUrl,
-            isPremium: mongoBook.isPremium,
-            price: mongoBook.price
-          };
-        }
-      } catch (mongoErr) {
-        console.warn("MongoDB fetch by ID failed:", mongoErr.message);
-      }
-    }
-
-    // 2. Fall back to uploadedBooks in-memory array if not found
-    if (!book) {
-      const numericId = parseInt(rawBookId);
-      book = uploadedBooks.find(b => String(b.id) === String(rawBookId) || (!isNaN(numericId) && b.id === numericId));
-    }
+    const book = await Book.findByPk(rawBookId);
 
     if (!book) return res.status(404).json({ message: 'Book not found' });
 
@@ -418,10 +326,10 @@ app.get('/api/books/read/:bookId', verifyToken, async (req, res) => {
     }
 
     // Check if user has purchased this book
-    const user = await User.findById(req.admin.id);
+    const user = await User.findByPk(req.admin.id);
     if (!user) return res.status(401).json({ message: 'User not found' });
 
-    const hasPurchased = user.purchasedBooks.some(id => id.toString() === rawBookId.toString());
+    const hasPurchased = user.purchasedBooks && user.purchasedBooks.includes(rawBookId.toString());
     if (!hasPurchased) {
       return res.status(403).json({ message: 'You have not purchased this book' });
     }
@@ -471,14 +379,25 @@ app.post('/api/payment/verify', verifyToken, async (req, res) => {
     }
 
     // Grant access based on type
+    const user = await User.findByPk(req.admin.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
     if (type === 'book' && bookId) {
-      await User.findByIdAndUpdate(req.admin.id, {
-        $addToSet: { purchasedBooks: bookId }
-      });
+      const currentPurchased = user.purchasedBooks || [];
+      if (!currentPurchased.includes(bookId)) {
+        await user.update({
+          purchasedBooks: [...currentPurchased, bookId]
+        });
+      }
     } else if (type === 'exam') {
-      await User.findByIdAndUpdate(req.admin.id, {
-        $addToSet: { paidExams: bookId } // reusing bookId field for exam name
-      });
+      const currentExams = user.paidExams || [];
+      if (!currentExams.includes(bookId)) {
+        await user.update({
+          paidExams: [...currentExams, bookId]
+        });
+      }
     }
 
     res.json({ success: true, message: 'Payment verified and access granted!' });
@@ -519,58 +438,69 @@ app.put('/api/admin/events/:id', verifyToken, (req, res) => {
 });
 
 // 6. Register Student for Admit Card
-app.post('/api/admin/student', verifyToken, (req, res) => {
-  const { name, rollNo, exam } = req.body;
-  if (!name || !rollNo) return res.status(400).json({ success: false, message: 'Name and Roll No are required' });
+app.post('/api/admin/student', verifyToken, async (req, res) => {
+  try {
+    const { name, rollNo, exam } = req.body;
+    if (!name || !rollNo) return res.status(400).json({ success: false, message: 'Name and Roll No are required' });
 
-  const newStudent = { name, rollNo, exam: exam || 'General Assessment' };
-  // Update if exists, else push
-  const existingIndex = registeredStudents.findIndex(s => s.rollNo === rollNo);
-  if (existingIndex >= 0) {
-    registeredStudents[existingIndex] = newStudent;
-  } else {
-    registeredStudents.push(newStudent);
+    const [student, created] = await Student.findOrCreate({
+      where: { rollNo },
+      defaults: { name, exam: exam || 'General Assessment' }
+    });
+
+    if (!created) {
+      await student.update({ name, exam: exam || 'General Assessment' });
+    }
+
+    res.json({ success: true, message: 'Student registered successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to register student: ' + err.message });
   }
-
-  fs.writeFileSync(studentsFile, JSON.stringify(registeredStudents, null, 2));
-  res.json({ success: true, message: 'Student registered successfully' });
 });
 
 // 7. Public Admit Card Generation
-app.get('/api/public/admit-card/:rollNo', (req, res) => {
-  const rollNo = req.params.rollNo;
-  const student = registeredStudents.find(s => s.rollNo === rollNo);
+app.get('/api/public/admit-card/:rollNo', async (req, res) => {
+  try {
+    const rollNo = req.params.rollNo;
+    const student = await Student.findOne({ where: { rollNo } });
 
-  if (!student) {
-    return res.status(404).send('Student not found. Please check your Roll Number.');
+    if (!student) {
+      return res.status(404).send('Student not found. Please check your Roll Number.');
+    }
+
+    // Create a PDF document
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    res.setHeader('Content-disposition', `attachment; filename=AdmitCard_${rollNo}.pdf`);
+    res.setHeader('Content-type', 'application/pdf');
+
+    doc.pipe(res);
+
+    // Design the PDF
+    doc.rect(20, 20, 555, 300).stroke('#4cc9f0'); // Outer border
+    doc.rect(25, 25, 545, 290).stroke('#adb5bd'); // Inner border
+
+    doc.fontSize(24).fillColor('#0b0c10').text('NEW APURBA SANGHA LIBRARY', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(16).fillColor('#7209b7').text('OFFICIAL ADMIT CARD', { align: 'center' });
+    doc.moveDown(2);
+
+    doc.fontSize(14).fillColor('black');
+    doc.text(`Student Name : ${student.name.toUpperCase()}`, 50, 150);
+    doc.text(`Roll Number  : ${student.rollNo}`, 50, 180);
+    doc.text(`Examination  : ${student.exam}`, 50, 210);
+
+    doc.moveDown(2);
+    doc.fontSize(10).fillColor('gray').text('Please bring a printed copy of this admit card to the examination center.', 50, 280, { align: 'center' });
+
+    doc.end();
+  } catch (err) {
+    res.status(500).send('Failed to generate admit card: ' + err.message);
   }
+});
 
-  // Create a PDF document
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
-  res.setHeader('Content-disposition', `attachment; filename=AdmitCard_${rollNo}.pdf`);
-  res.setHeader('Content-type', 'application/pdf');
-
-  doc.pipe(res);
-
-  // Design the PDF
-  doc.rect(20, 20, 555, 300).stroke('#4cc9f0'); // Outer border
-  doc.rect(25, 25, 545, 290).stroke('#adb5bd'); // Inner border
-
-  doc.fontSize(24).fillColor('#0b0c10').text('NEW APURBA SANGHA LIBRARY', { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(16).fillColor('#7209b7').text('OFFICIAL ADMIT CARD', { align: 'center' });
-  doc.moveDown(2);
-
-  doc.fontSize(14).fillColor('black');
-  doc.text(`Student Name : ${student.name.toUpperCase()}`, 50, 150);
-  doc.text(`Roll Number  : ${student.rollNo}`, 50, 180);
-  doc.text(`Examination  : ${student.exam}`, 50, 210);
-
-  doc.moveDown(2);
-  doc.fontSize(10).fillColor('gray').text('Please bring a printed copy of this admit card to the examination center.', 50, 280, { align: 'center' });
-
-  doc.end();
+app.get('/', (req, res) => {
+  res.json({ success: true, message: '3D Library Backend API is running successfully!' });
 });
 
 app.listen(PORT, () => {
